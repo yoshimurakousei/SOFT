@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>スロット実践統合フォーム</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    .section { margin-bottom: 25px; }
+    .pt-entry { display: flex; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+    .pt-entry input[type="number"] { width: 60px; margin: 0 10px; }
+    .bar-container { width: 150px; background-color: #eee; height: 20px; margin: 0 10px; position: relative; }
+    .bar-fill { height: 100%; transition: width 0.3s ease-in-out; }
+    .left-bar { background-color: #f78fb3; }
+    .middle-bar { background-color: #70c1b3; }
+    .right-bar { background-color: #9b59b6; }
+    .演出表示 { font-size: 14px; color: #444; margin-top: 5px; margin-left: 10px; }
+    .log { white-space: pre-line; background: #f8f8f8; padding: 10px; border: 1px solid #ccc; margin-top: 20px; height: 240px; overflow-y: auto; }
+    .initial-info { background: #fffbea; border: 1px solid #ccc; padding: 10px; margin: 20px 0; }
+    .initial-info strong { color: #444; margin-right: 10px; }
+  </style>
+</head>
+<body>
+<h2>スロット実践統合フォーム</h2>
+
+<div class="section">
+  <label>日付:</label><input type="date" id="input-date" onchange="saveInitialInfo()">
+  <label>台番号:</label><input type="text" id="input-machine" onchange="saveInitialInfo()">
+  <label>貸出レート:</label>
+  <select id="input-rate" onchange="saveInitialInfo()">
+    <option value="20スロ">20スロ</option>
+    <option value="5スロ">5スロ</option>
+    <option value="2スロ">2スロ</option>
+    <option value="46枚貸し">46枚貸し</option>
+  </select>
+</div>
+
+<div class="initial-info" id="fixed-info" style="display:none;">
+  <strong>実践中の台情報:</strong>
+  <span id="fixed-date">日付</span> ／
+  <span id="fixed-machine">台番号</span> ／
+  <span id="fixed-rate">貸出レート</span>
+</div>
+
+<!-- 状態選択 -->
+<div class="section">
+  <strong>状態:</strong><br>
+  <label><input type="radio" name="mode" value="通常" checked> 通常</label>
+  <label><input type="radio" name="mode" value="高確"> 高確</label>
+  <label><input type="radio" name="mode" value="超高確"> 超高確</label><br><br>
+  <strong>特殊状態:</strong><br>
+  <label><input type="checkbox" id="dokidoki"> ドキドキ高確</label>
+  <label><input type="checkbox" id="copy"> にゃんにゃんコピー君</label>
+</div>
+<!-- チャンス目記録 -->
+<div class="section">
+  <button onclick="addPt('left')">❤️ 左チャンス目</button>
+  <button onclick="addPt('middle')">🍀 中チャンス目</button>
+  <button onclick="addPt('right')">⭐ 右チャンス目</button>
+</div>
+
+<div class="section">
+  <button onclick="combo(['left','middle'])">左＋中</button>
+  <button onclick="combo(['left','right'])">左＋右</button>
+  <button onclick="combo(['middle','right'])">中＋右</button>
+  <button onclick="allCombo()">左＋中＋右（全同時）</button>
+</div>
+
+<div class="section">
+  <div class="pt-entry">
+    <label>❤️ 左チャンス目：</label>
+    <input type="number" id="leftPt" value="0" max="200" oninput="updateBar('left')">
+    <div class="bar-container"><div class="bar-fill left-bar" id="bar-left"></div></div>
+    <div class="演出表示" id="hint-left">▶ 演出：なし</div>
+  </div>
+  <div class="pt-entry">
+    <label>🍀 中チャンス目：</label>
+    <input type="number" id="middlePt" value="0" max="200" oninput="updateBar('middle')">
+    <div class="bar-container"><div class="bar-fill middle-bar" id="bar-middle"></div></div>
+    <div class="演出表示" id="hint-middle">▶ 演出：なし</div>
+  </div>
+  <div class="pt-entry">
+    <label>⭐ 右チャンス目：</label>
+    <input type="number" id="rightPt" value="0" max="200" oninput="updateBar('right')">
+    <div class="bar-container"><div class="bar-fill right-bar" id="bar-right"></div></div>
+    <div class="演出表示" id="hint-right">▶ 演出：なし</div>
+  </div>
+</div>
+
+<!-- アイキャッチ演出 -->
+<div class="section">
+  <h3>アイキャッチ演出</h3>
+  <button onclick="logHintMulti(['left','middle'], '左or中（中〜大）')">左or中（中〜大）</button>
+  <button onclick="logHintMulti(['left','middle'], '左or中（140pt以上）')">左or中（140pt以上）</button>
+  <button onclick="logHint('right', '右（中〜大）')">右（中〜大）</button>
+  <button onclick="logHint('right', '右（140pt以上）')">右（140pt以上）</button>
+</div>
+
+<!-- セリフ演出 -->
+<div class="section">
+  <h3>セリフ演出</h3>
+  <button onclick="logHint('left', 'ピンクセリフ（左）')">ピンク（左）</button>
+  <button onclick="logHint('middle', '緑セリフ（中）')">緑（中）</button>
+  <button onclick="logHint('right', '紫セリフ（右）')">紫（右）</button>
+</div>
+
+<!-- CZ選択 -->
+<div class="section">
+  <h3>CZ選択</h3>
+  <button onclick="openCZModal('left', 'きゅんきゅんバルーン')">きゅんきゅんバルーン</button>
+  <button onclick="openCZModal('middle', 'ときめきスウィート')">ときめきスウィート</button>
+  <button onclick="openCZModal('right', 'ぷっちゅんチャレンジ')">ぷっちゅんチャレンジ</button>
+  <button onclick="openCZModal(null, '追憶の闇')">追憶の闇</button>
+</div>
+
+<!-- CZモーダル -->
+<div id="cz-modal" style="display:none; background:#f0f0f0; border:1px solid #ccc; padding:15px; margin:10px 0;">
+  <strong id="cz-label">CZ入力</strong><br>
+  ゲーム数: <input type="number" id="cz-game" oninput="checkCarryOver()"> ／ 
+  投資金額: <input type="number" id="cz-invest"><br>
+  AT継続数: <input type="number" id="cz-loop"> ／ 
+  AT獲得枚数: <input type="number" id="cz-medals"><br>
+  <div id="carryOverFields" style="display:none; margin-top:10px;">
+    <label>現在の持ち枚数: <input type="number" id="cz-current"></label><br>
+    <label><input type="checkbox" id="cz-carry"> AT引き継ぎとして記録する</label>
+  </div>
+  <button onclick="saveCZ()">保存</button>
+</div>
+
+<!-- コメント -->
+<div class="section">
+  <h3>コメント入力</h3>
+  <textarea id="comment" rows="2" cols="50" placeholder="通常時の演出や気づきなどを記録…"></textarea><br>
+  <button onclick="saveComment()">コメントを記録</button>
+</div>
+
+<!-- ログ欄 -->
+<div class="log" id="log">▼ ログ</div>
+
+<!-- コピー保存 -->
+<div class="section">
+  <button onclick="copyLogToClipboard()">ログをコピーしてメモ帳に貼れるようにする</button>
+</div>
+
+<!-- ChatGPT連携 -->
+<div class="section">
+  <h3>ChatGPTに聞く</h3>
+  <button onclick="generateGPTPrompt()">選択したログから質問文を生成</button><br><br>
+  <textarea id="gptPrompt" rows="5" cols="60" placeholder="ここに質問文が表示されます" readonly></textarea><br><br>
+  <button onclick="openChatGPT()">ChatGPTに送る（ブラウザで開く）</button>
+</div>
+<script>
+const icons = { left: '❤️', middle: '🍀', right: '⭐' };
+let czData = { reel: '', name: '' };
+
+function getTime() {
+  const now = new Date();
+  return now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+}
+
+function saveInitialInfo() {
+  const date = document.getElementById('input-date').value;
+  const machine = document.getElementById('input-machine').value;
+  const rate = document.getElementById('input-rate').value;
+  if (date && machine && rate) {
+    document.getElementById('fixed-info').style.display = 'block';
+    document.getElementById('fixed-date').innerText = date;
+    document.getElementById('fixed-machine').innerText = machine;
+    document.getElementById('fixed-rate').innerText = rate;
+  }
+}
+
+function getStatus() {
+  const mode = document.querySelector('input[name="mode"]:checked').value;
+  const extras = [];
+  if (document.getElementById('dokidoki').checked) extras.push("ドキドキ");
+  if (document.getElementById('copy').checked) extras.push("コピー君");
+  return extras.length ? `（${mode}, ${extras.join("・")}）` : `（${mode}）`;
+}
+
+function getBasePt() {
+  const mode = document.querySelector('input[name="mode"]:checked').value;
+  let base = (mode === '高確') ? 10 : (mode === '超高確' ? 75 : 1);
+  if (document.getElementById('dokidoki').checked) base += 10;
+  return base;
+}
+
+function finalPt(base) {
+  return document.getElementById('copy').checked ? base * 2 : base;
+}
+
+function updateBar(reel) {
+  const value = document.getElementById(reel + 'Pt').value;
+  const percent = Math.min(150, value) / 150 * 100;
+  document.getElementById("bar-" + reel).style.width = percent + "%";
+}
+
+function log(line, allowSelect = true) {
+  const logBox = document.getElementById("log");
+  const time = getTime();
+  const logLine = document.createElement("div");
+  if (allowSelect) {
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.className = "log-checkbox";
+    checkbox.dataset.text = time + " " + line;
+    logLine.appendChild(checkbox);
+  }
+  logLine.appendChild(document.createTextNode((allowSelect ? " " : "") + time + " " + line));
+  logBox.appendChild(logLine);
+  logBox.scrollTop = logBox.scrollHeight;
+}
+
+function addPt(reel) {
+  const pt = finalPt(getBasePt());
+  const input = document.getElementById(reel + 'Pt');
+  input.value = Math.max(0, parseInt(input.value) + pt);
+  updateBar(reel);
+  log(`${icons[reel]} +${pt}pt ${getStatus()}`);
+}
+
+function combo(reels) {
+  const pt = finalPt(getBasePt()) + 5;
+  reels.forEach(reel => {
+    const input = document.getElementById(reel + 'Pt');
+    input.value = Math.max(0, parseInt(input.value) + pt);
+    updateBar(reel);
+    log(`${icons[reel]} +${pt}pt（複合）`);
+  });
+}
+
+function allCombo() {
+  ['left','middle','right'].forEach(reel => {
+    const input = document.getElementById(reel + 'Pt');
+    input.value = Math.max(0, parseInt(input.value) + 1);
+    updateBar(reel);
+    log(`${icons[reel]} +1pt（全同時）`);
+  });
+}
+
+function logHint(reel, text) {
+  const hint = document.getElementById('hint-' + reel);
+  if (hint) hint.innerText = `▶ 演出：${text}`;
+  log(`${icons[reel]} ${text}`);
+}
+
+function logHintMulti(reels, text) {
+  reels.forEach(reel => logHint(reel, text));
+}
+
+function openCZModal(reel, name) {
+  czData = { reel, name };
+  document.getElementById("cz-modal").style.display = "block";
+  document.getElementById("cz-label").innerText = `CZ記録：${name}`;
+}
+
+function checkCarryOver() {
+  const g = parseInt(document.getElementById("cz-game").value);
+  const show = g >= 0 && g <= 230;
+  document.getElementById("carryOverFields").style.display = show ? "block" : "none";
+}
+
+function saveCZ() {
+  const g = document.getElementById("cz-game").value || "-";
+  const y = document.getElementById("cz-invest").value || "-";
+  const loop = document.getElementById("cz-loop").value || "";
+  const medals = document.getElementById("cz-medals").value || "";
+  const carry = document.getElementById("cz-carry").checked;
+  const current = parseInt(document.getElementById("cz-current").value || 0);
+  const now = getTime();
+
+  if (czData.name === '追憶の闇') {
+    log(`🌀 CZ記録（${czData.name}、${g}G、${y}円）`);
+  } else {
+    const input = document.getElementById(czData.reel + 'Pt');
+    input.value = Math.max(0, parseInt(input.value) - 150);
+    updateBar(czData.reel);
+    log(`${now} ${icons[czData.reel]} CZ -150pt（${czData.name}、${g}G、${y}円）`);
+  }
+
+  if (loop && medals) {
+    let carryLog = "";
+    if (carry) {
+      carryLog = `（引き継ぎ：${current}枚）`;
+    }
+    log(`${now} ${icons[czData.reel] || "❤️"} AT${loop}連 ${medals}枚 ${carryLog}`);
+  }
+
+  document.getElementById("cz-modal").style.display = "none";
+}
+
+function saveComment() {
+  const text = document.getElementById("comment").value.trim();
+  if (text) {
+    log(`📝 コメント：${text}`);
+    document.getElementById("comment").value = "";
+  }
+}
+
+function generateGPTPrompt() {
+  const checked = Array.from(document.querySelectorAll('.log-checkbox:checked'));
+  if (checked.length === 0) {
+    alert("ログが選択されていません。");
+    return;
+  }
+  const logs = checked.map(cb => cb.dataset.text);
+  const prompt = `以下の実践ログを参考に、私はこの台を続行するべきか、やめるべきか判断してください。\\n\\n` + logs.join("\\n");
+  document.getElementById("gptPrompt").value = prompt;
+}
+
+function openChatGPT() {
+  const prompt = document.getElementById("gptPrompt").value.trim();
+  if (!prompt) {
+    alert("質問文がありません！");
+    return;
+  }
+  const encoded = encodeURIComponent(prompt);
+  const url = `https://chat.openai.com/?q=${encoded}`;
+  window.open(url, "_blank");
+}
+
+function copyLogToClipboard() {
+  const logText = Array.from(document.querySelectorAll('#log div'))
+    .map(div => div.innerText)
+    .join('\\n');
+  navigator.clipboard.writeText(logText).then(() => {
+    alert("✅ ログをコピーしました！iPhoneのメモ帳などに貼り付けてください。");
+  }).catch(() => {
+    alert("⚠️ コピーに失敗しました。お使いのブラウザが対応していない可能性があります。");
+  });
+}
+</script>
+</body>
+</html>
